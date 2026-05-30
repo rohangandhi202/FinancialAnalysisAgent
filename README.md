@@ -1,43 +1,47 @@
-# 📊 Autonomous Financial Analysis Agent
+# Autonomous Financial Analysis Agent
 
-An AI-powered financial analysis system that fetches real company data, computes key financial ratios, detects anomalies, and generates structured investment reports — all orchestrated by a Claude-powered reasoning agent.
+An end-to-end AI system that fetches real company financials, computes 15+ financial ratios, detects anomalies, and generates structured investment reports — orchestrated by a Claude-powered reasoning agent with a live Streamlit UI.
 
-Built as a portfolio project demonstrating **agentic AI design patterns**, **data engineering**, and **financial domain knowledge**.
+Built to demonstrate agentic AI design patterns, production data engineering, and applied financial domain knowledge.
 
 ---
 
-## Demo
+## What It Does
 
-```
-python3 -m financial_agent.agent --ticker AAPL
-```
+Type a ticker symbol. The agent:
+
+1. Fetches income statements, balance sheets, cash flow statements, and price history from Alpha Vantage
+2. Computes 15+ financial ratios and detects anomalies automatically
+3. Runs a Claude claude-sonnet-4-6 reasoning agent that calls tools iteratively, then produces a structured investment report
+4. Renders a polished HTML report with embedded charts — downloadable as a single file
+
 
 ```
 ═══════════════════════════════════════════════════════════════════
-  📊 Financial Analysis: AAPL
-  2025-01-15
+  📊 Financial Analysis: AAPL                          2026-05-30
 ═══════════════════════════════════════════════════════════════════
 
   EXECUTIVE SUMMARY
-  Apple demonstrates exceptional cash generation and profitability,
-  with a 26.4% net margin and $101B in free cash flow. However,
-  revenue contracted 2.8% YoY, signaling near-term growth headwinds.
+  Apple demonstrates exceptional cash generation with $98.8B in free
+  cash flow and a 26.9% net margin. Revenue grew 6.4% YoY while net
+  income surged 19.5%, reflecting meaningful margin expansion.
 
   ✅ STRENGTHS
-    • Best-in-class free cash flow generation
-      Data: FCF of $101B, FCF/NI ratio of 1.04x indicates high earnings quality
-    • Strong interest coverage
-      Data: Interest coverage of 29.3x — debt is comfortably serviceable
+    • Industry-leading profitability
+      Data: Net margin 26.9%, operating margin 32.0% — well above
+      S&P 500 median of ~10%
+    • High-quality earnings
+      Data: FCF/NI ratio of 0.88x confirms cash-backed income
 
   ⚠️  RISKS
-    • Revenue contraction
-      Data: Revenue declined 2.8% YoY from $394B to $383B
+    • Stock near 52-week high
+      Data: $312.06 vs $312.51 high — limited valuation margin of safety
 
-  📈 RECOMMENDATION: CAUTIOUS (Confidence: MEDIUM)
-  Strong fundamentals and cash generation offset by declining revenue.
-  Watch for return to growth before turning bullish.
+  📈 RECOMMENDATION: CAUTIOUS  (Confidence: MEDIUM)
+  Exceptional fundamentals but valuation entry risk at current levels.
+  Watch FCF recovery and revenue growth acceleration.
 
-  👁  WATCH: revenue_growth_yoy, fcf_trend, gross_margin
+  👁  WATCH: fcf_growth_yoy, revenue_growth_yoy, current_ratio
 ═══════════════════════════════════════════════════════════════════
 ```
 
@@ -46,49 +50,44 @@ python3 -m financial_agent.agent --ticker AAPL
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     User / CLI                              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Agent Layer                              │
-│              (financial_agent/agent.py)                     │
-│                                                             │
-│  • Claude claude-sonnet-4-6 with tool use                   │
-│  • Agentic loop: calls tools → reasons → generates report   │
-│  • Structured JSON output with fixed schema                 │
-└──────┬────────────────┬───────────────┬────────────────────┘
-       │                │               │
-       ▼                ▼               ▼
-  get_metrics    get_prices    compare_companies
-  get_anomalies
-       │                │               │
-       └────────────────┴───────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Analysis Engine                            │
-│           (financial_agent/financial_analysis.py)           │
-│                                                             │
-│  • 15+ financial ratios (P/E, D/E, ROE, FCF yield, etc.)   │
-│  • YoY trend computation                                    │
-│  • Anomaly detection (FCF divergence, debt spike, etc.)     │
-└─────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Data Layer                                │
-│            (financial_agent/data_ingestion.py)              │
-│                                                             │
-│  • Alpha Vantage API (income statement, balance sheet,      │
-│    cash flow, price history)                                │
-│  • SQLite storage with 90-day cache (free tier safe)        │
-│  • Raw JSON preservation for reprocessing                   │
-└─────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-              financial_data.db (SQLite)
+┌──────────────────────────────────────────────────────────────┐
+│               Streamlit UI  /  CLI                           │
+│                      app.py                                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│                      Agent Layer                             │
+│                  financial_agent/agent.py                    │
+│                                                              │
+│   Claude claude-sonnet-4-6 + tool use (agentic loop)         │
+│   Tools: get_financial_metrics · get_price_history           │
+│          compare_companies · get_anomaly_flags               │
+│   Output: structured JSON with fixed schema                  │
+└────────┬──────────────────┬──────────────────────────────────┘
+         │                  │
+         ▼                  ▼
+┌─────────────────┐  ┌──────────────────────────────────────────┐
+│  Report Layer   │  │           Analysis Engine                │
+│  report_        │  │     financial_agent/financial_analysis.py│
+│  generator.py   │  │                                          │
+│                 │  │  15+ ratios: net margin, ROE, D/E,       │
+│  4 matplotlib   │  │  current ratio, FCF/NI, interest cov.    │
+│  charts → HTML  │  │  YoY trends · anomaly detection          │
+└─────────────────┘  └──────────────────┬───────────────────────┘
+                                        │
+                                        ▼
+                     ┌──────────────────────────────────────────┐
+                     │              Data Layer                  │
+                     │    financial_agent/data_ingestion.py     │
+                     │                                          │
+                     │  Alpha Vantage API → SQLite              │
+                     │  90-day cache · raw JSON preserved       │
+                     │  Income · Balance · Cash Flow · Prices   │
+                     └──────────────────┬───────────────────────┘
+                                        │
+                                        ▼
+                               financial_data.db
 ```
 
 ---
@@ -96,34 +95,14 @@ python3 -m financial_agent.agent --ticker AAPL
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | AI / Reasoning | Claude API (`claude-sonnet-4-6`) with tool use |
-| Financial Data | Alpha Vantage (free tier) |
+| Financial Data | Alpha Vantage (free tier — 25 calls/day) |
 | Data Processing | Python, pandas |
-| Storage | SQLite (zero cost, local) |
-| Visualization | matplotlib, plotly *(Day 4)* |
-| UI / Demo | Streamlit *(Day 5)* |
-
----
-
-## Project Structure
-
-```
-FinancialAnalysisAgent/
-├── financial_agent/
-│   ├── __init__.py
-│   ├── data_ingestion.py        # Alpha Vantage API → SQLite pipeline
-│   ├── financial_analysis.py    # Ratio computation + anomaly detection
-│   ├── agent.py                 # Claude agent with tool use
-│   ├── test_ingestion.py        # Tests for data layer (10/10)
-│   ├── test_financial_analysis.py  # Tests for analysis engine (12/12)
-│   └── test_agent.py            # Tests for agent tools (8/8)
-├── financial_data.db            # SQLite database (gitignored)
-├── .env                         # API keys (gitignored)
-├── .env.example                 # Key template (committed)
-├── requirements.txt
-└── README.md
-```
+| Storage | SQLite with 90-day cache |
+| Visualization | matplotlib (4 embedded charts) |
+| UI | Streamlit |
+| Deploy | Streamlit Cloud (free) |
 
 ---
 
@@ -141,55 +120,53 @@ pip install -r requirements.txt
 
 ### 2. Get API keys (both free)
 
-| Service | Where to get it | Free tier |
-|---------|----------------|-----------|
-| Anthropic | [console.anthropic.com](https://console.anthropic.com) | Pay-per-use |
-| Alpha Vantage | [alphavantage.co](https://www.alphavantage.co/support/#api-key) | 25 calls/day |
+| Service | Sign up | Free tier |
+|---|---|---|
+| Anthropic | [console.anthropic.com](https://console.anthropic.com) | Pay-per-use (~$0.01 per report) |
+| Alpha Vantage | [alphavantage.co](https://www.alphavantage.co/support/#api-key) | 25 API calls/day |
 
 ### 3. Configure environment
 
 ```bash
 cp .env.example .env
-# Edit .env and add your real keys
+# Add your keys to .env
 ```
 
-Also set your Alpha Vantage key in `financial_agent/data_ingestion.py`:
-
-```python
-API_KEY = "your-alpha-vantage-key-here"
+Your `.env` should contain:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+ALPHA_VANTAGE_API_KEY=your-key-here
 ```
 
 ---
 
 ## Usage
 
-### Fetch financial data
+### Streamlit UI (recommended)
 
 ```bash
-# Fetch a single ticker (~4 of your 25 daily API calls)
+streamlit run app.py
+```
+
+Opens at `http://localhost:8501`. Enter any ticker and hit Analyze.
+
+### CLI — fetch data
+
+```bash
+# Single ticker (~4 of your 25 daily API calls)
 python3 -m financial_agent.data_ingestion --ticker AAPL
 
-# Fetch multiple tickers
+# Multiple tickers
 python3 -m financial_agent.data_ingestion --ticker AAPL MSFT GOOGL
 
-# Force re-fetch (bypass cache)
+# Force re-fetch (bypass 90-day cache)
 python3 -m financial_agent.data_ingestion --ticker AAPL --force-refresh
 ```
 
-### Run the analysis engine
+### CLI — run the agent
 
 ```bash
-# View computed ratios for a ticker
-python3 -m financial_agent.financial_analysis --ticker AAPL
-
-# Export to CSV
-python3 -m financial_agent.financial_analysis --ticker AAPL MSFT --csv analysis.csv
-```
-
-### Run the AI agent
-
-```bash
-# Formatted report
+# Formatted terminal report
 python3 -m financial_agent.agent --ticker AAPL
 
 # Compare two companies
@@ -199,43 +176,45 @@ python3 -m financial_agent.agent --ticker AAPL --vs MSFT
 python3 -m financial_agent.agent --ticker AAPL --json
 ```
 
-### Run the test suite
+### CLI — generate HTML report
 
 ```bash
-python3 -m financial_agent.test_ingestion          # 10/10
-python3 -m financial_agent.test_financial_analysis # 12/12
-python3 -m financial_agent.test_agent              # 8/8
+# Creates reports/AAPL_<date>.html
+python3 -m financial_agent.report_generator --ticker AAPL
+
+# With comparison
+python3 -m financial_agent.report_generator --ticker AAPL --vs MSFT
+```
+
+### Run all tests
+
+```bash
+python3 -m financial_agent.test_ingestion              # 10/10
+python3 -m financial_agent.test_financial_analysis     # 12/12
+python3 -m financial_agent.test_agent                  # 8/8
+python3 -m financial_agent.test_report_generator       # 12/12
 ```
 
 ---
 
-## Financial Metrics Computed
+## Financial Metrics
 
-**Profitability**
-- Net margin, gross margin, operating margin, EBITDA margin
-- Return on equity (ROE), return on assets (ROA)
+**Profitability** — net margin, gross margin, operating margin, EBITDA margin, ROE, ROA
 
-**Solvency**
-- Debt-to-equity, debt-to-assets
-- Interest coverage ratio
+**Solvency** — debt-to-equity, debt-to-assets, interest coverage ratio
 
-**Liquidity**
-- Current ratio
+**Liquidity** — current ratio
 
-**Cash Flow Quality**
-- FCF-to-net-income ratio (earnings quality signal)
-- Operating CF-to-net-income ratio
+**Cash Flow Quality** — FCF/net income ratio, operating CF/net income ratio
 
-**Growth (YoY)**
-- Revenue growth, net income growth, FCF growth
-- Margin expansion/compression (percentage points)
-- Debt trajectory
+**Growth (YoY)** — revenue, net income, FCF, margin expansion (pp), debt trajectory
 
-**Anomaly Flags**
+**Anomaly Detection**
+
 | Flag | Trigger | Severity |
-|------|---------|---------|
-| `FCF_DIVERGENCE` | \|FCF - Net Income\| > 25% of Net Income | MEDIUM |
-| `EARNINGS_MISS` | Revenue +5% but Net Income -20% | HIGH |
+|---|---|---|
+| `FCF_DIVERGENCE` | \|FCF − Net Income\| > 25% of Net Income | MEDIUM |
+| `EARNINGS_MISS` | Revenue +5% YoY but Net Income −20% YoY | HIGH |
 | `MARGIN_COMPRESSION` | Net margin fell 3+ percentage points | MEDIUM |
 | `DEBT_SPIKE` | Total debt grew 20%+ YoY | MEDIUM |
 
@@ -243,27 +222,37 @@ python3 -m financial_agent.test_agent              # 8/8
 
 ## Agent Design
 
-The Claude agent uses **tool use** (function calling) to reason over financial data before generating its report. This mirrors production agentic architectures:
+The Claude agent uses **tool use** (function calling) to reason over financial data before generating its report — the same pattern used in production agentic systems.
 
-1. **Tool selection** — Claude decides which tools to call and in what order
-2. **Iterative reasoning** — results from each tool inform subsequent calls
-3. **Structured output** — fixed JSON schema enforced via system prompt
-4. **Confidence calibration** — HIGH/MEDIUM/LOW confidence based on signal consistency
+**Agentic loop:**
+1. Claude receives a user query (e.g. "Analyze AAPL")
+2. Claude decides which tools to call and in what order
+3. Tool results are fed back into the conversation
+4. Claude reasons over accumulated data and produces a structured JSON report
 
-The system prompt enforces that every claim in the report is grounded in a specific data point from a tool result — no hallucinated numbers.
+**Why this matters:** Claude never sees raw data upfront. It actively retrieves what it needs, which means the reasoning is grounded in verified numbers from each tool call. Every claim in the output cites a specific data point — no hallucinated figures.
+
+**Tools available to the agent:**
+
+| Tool | What it returns |
+|---|---|
+| `get_financial_metrics` | All computed ratios, trends, and anomaly flags |
+| `get_price_history` | 52-week range, latest close, recent price sample |
+| `compare_companies` | Side-by-side ratio comparison across tickers |
+| `get_anomaly_flags` | Focused risk flag summary with severity and detail |
 
 ---
 
-## Roadmap
+## Deploying to Streamlit Cloud
 
-- [x] Day 1 — Data ingestion layer (Alpha Vantage → SQLite)
-- [x] Day 2 — Financial analysis engine (ratios + anomaly detection)
-- [x] Day 3 — Claude agent with tool use
-- [ ] Day 4 — HTML report with matplotlib/plotly charts
-- [ ] Day 5 — Streamlit UI + deployment
+1. Push this repo to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io) → sign in with GitHub
+3. Click **New app** → select repo → set main file to `app.py`
+4. Under **Advanced settings → Secrets**, add:
+   ```toml
+   ANTHROPIC_API_KEY = "sk-ant-..."
+   ALPHA_VANTAGE_API_KEY = "your-key-here"
+   ```
+5. Deploy — you get a permanent public URL
 
 ---
-
-## Disclaimer
-
-This tool is for informational and educational purposes only. It does not constitute financial advice. Always conduct your own due diligence before making investment decisions.

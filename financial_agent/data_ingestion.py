@@ -21,10 +21,14 @@ import argparse
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # loads variables from .env into the environment
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-API_KEY = "GJR9B41DSSR6ZWGR"          # Free at alphavantage.co
+API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
 DB_PATH = Path("financial_data.db")
 

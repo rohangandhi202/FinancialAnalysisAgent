@@ -5,3 +5,4 @@ __pycache__/
 financial_data.db
 .DS_Store
 reports/
+secrets.toml

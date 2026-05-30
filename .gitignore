@@ -4,3 +4,4 @@ __pycache__/
 .env
 financial_data.db
 .DS_Store
+reports/

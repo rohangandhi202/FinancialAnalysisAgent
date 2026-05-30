@@ -413,13 +413,25 @@ def run_agent(ticker: str, compare_with: list[str] = None) -> dict:
             for block in response.content:
                 if hasattr(block, "text") and block.text.strip():
                     try:
-                        # Strip any accidental markdown fences
                         text = block.text.strip()
-                        if text.startswith("```"):
-                            text = text.split("```")[1]
-                            if text.startswith("json"):
-                                text = text[4:]
-                        return json.loads(text.strip())
+
+                        # Strategy 1: find the first { and last } and parse between them.
+                        # This handles preamble text, markdown fences, and trailing content.
+                        start = text.find("{")
+                        end   = text.rfind("}")
+                        if start != -1 and end != -1 and end > start:
+                            return json.loads(text[start:end + 1])
+
+                        # Strategy 2: strip markdown fences if strategy 1 somehow failed
+                        if "```" in text:
+                            inner = text.split("```")[1]
+                            if inner.startswith("json"):
+                                inner = inner[4:]
+                            return json.loads(inner.strip())
+
+                        # Strategy 3: try the raw text as-is
+                        return json.loads(text)
+
                     except json.JSONDecodeError as e:
                         log.error(f"Failed to parse agent JSON output: {e}")
                         log.error(f"Raw output: {block.text}")

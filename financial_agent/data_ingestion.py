@@ -24,7 +24,7 @@ from pathlib import Path
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-API_KEY = "YOUR_API_KEY_HERE"          # Free at alphavantage.co
+API_KEY = "GJR9B41DSSR6ZWGR"          # Free at alphavantage.co
 BASE_URL = "https://www.alphavantage.co/query"
 DB_PATH = Path("financial_data.db")
 
